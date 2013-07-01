@@ -1,0 +1,14 @@
+include_HEADERS = global.h
+include_HEADERS += wutils.h
+include_HEADERS += tbfs_bencode.h
+include_HEADERS += tbfs_cmd_server.h
+include_HEADERS += tbfs_mng.h
+include_HEADERS += tbfs_storage_mng.h
+include_HEADERS += tbfs_storage_torrent.h
+include_HEADERS += tbfs_bitfield.h
+include_HEADERS += tbfs_peer_client.h
+include_HEADERS += tbfs_peer.h
+include_HEADERS += tbfs_peer_mng.h
+include_HEADERS += tbfs_peer_server.h
+include_HEADERS += tbfs_torrent.h
+include_HEADERS += tbfs_tracker_client.h

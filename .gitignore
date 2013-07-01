@@ -15,3 +15,7 @@
 *.exe
 *.out
 *.app
+
+autom4te.cache
+m4/*
+config.h.in~
