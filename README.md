@@ -1,4 +1,4 @@
-tbfs_node_client
+Torrent client
 ================
 
-Torrent client
+An optimized for pieces / blocks transfer torrent client.
