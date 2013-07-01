@@ -23,6 +23,10 @@
 typedef struct _StorageTorrent StorageTorrent;
 
 StorageTorrent *tbfs_storage_torrent_create (StorageMng *mng, const gchar *info_hash);
-void tbfs_storage_torrent_destroy (StorageMng *mng);
+void tbfs_storage_torrent_destroy (StorageTorrent *storage);
+
+const gchar *tbfs_storage_torrent_get_info_hash (StorageTorrent *storage);
+
+void tbfs_storage_torrent_write_piece_buf (StorageTorrent *storage, guint32 piece_idx, guint32 offset, struct evbuffer *in_buf);
 
 #endif

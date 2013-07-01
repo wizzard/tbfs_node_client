@@ -24,4 +24,5 @@ typedef struct _StorageMng StorageMng;
 StorageMng *tbfs_storage_mng_create (Application *app);
 void tbfs_storage_mng_destroy (StorageMng *mng);
 
+Application *tbfs_storage_mng_get_app (StorageMng *mng);
 #endif

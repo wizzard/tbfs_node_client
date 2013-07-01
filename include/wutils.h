@@ -120,9 +120,20 @@ void escape_sha1 (char * out, const uint8_t *sha1);
 // file utils
 // remove directory tree
 int utils_del_tree (const gchar *path);
+gboolean dir_exists_and_writable (const gchar *path);
 
 // sys utils
 int wutils_daemonize (void);
+
+// range
+typedef struct _WRange WRange;
+WRange *wrange_create (void);
+void wrange_destroy (WRange *range);
+void wrange_add (WRange *range, guint64 start, guint64 end);
+gboolean wrange_contain (WRange *range, guint64 start, guint64 end);
+gint wrange_count (WRange *range);
+guint64 wrange_length (WRange *range);
+void wrange_print (WRange *range);
 
 // get min / max of integer types
 #define type_bits(t) ((t) (sizeof(t) * (CHAR_BIT)))

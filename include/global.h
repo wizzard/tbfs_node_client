@@ -59,6 +59,7 @@
 
 #include <glib.h>
 #include <glib/gprintf.h>
+#include <glib/gstdio.h>
 
 #include <openssl/engine.h>
 #include <openssl/hmac.h>

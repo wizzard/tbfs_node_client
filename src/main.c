@@ -184,6 +184,7 @@ int main (G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[])
     GError *error = NULL;
     gchar **s_config = NULL;
     gchar **s_peer_id = NULL;
+    gchar **s_storage = NULL;
     gboolean foreground = FALSE;
     gchar conf_str[1023];
     gboolean verbose = FALSE;
@@ -196,6 +197,7 @@ int main (G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[])
 
     GOptionEntry entries[] = {
         { "peer-id", 'p', 0, G_OPTION_ARG_STRING_ARRAY, &s_peer_id, "Set PeerID.", NULL },
+        { "storage-dir", 's', 0, G_OPTION_ARG_FILENAME_ARRAY, &s_storage, "Set torrent storage directory", NULL},
         { "config", 'c', 0, G_OPTION_ARG_FILENAME_ARRAY, &s_config, conf_str, NULL},
         { "foreground", 'f', 0, G_OPTION_ARG_NONE, &foreground, "Flag. Do not daemonize process.", NULL },
         { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Verbose output.", NULL },
@@ -251,6 +253,7 @@ int main (G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[])
         conf_set_boolean (app->conf, "app.foreground", FALSE);
         conf_set_string (app->conf, "peer.default_id", "xxxxxxxxxxxxxxxxxxxx");
         conf_set_int (app->conf, "peer_client.check_sec", 10);
+        conf_set_string (app->conf, "storage.dir", "storage/");
     }
 
     if (verbose)
@@ -277,6 +280,20 @@ int main (G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[])
         conf_set_string (app->conf, "peer.peer_id", s_peer_id[0]);
         g_strfreev (s_peer_id);
     }
+    // set storage dir from command line
+    if (s_storage && g_strv_length (s_storage) >= 1) {
+        conf_set_string (app->conf, "storage.dir", s_storage[0]);
+        g_strfreev (s_storage);
+    }
+
+    // check if path is a directory and try to access it
+    if (!dir_exists_and_writable (conf_get_string (app->conf, "storage.dir"))) {
+        LOG_err (APP_LOG, "Storage directory %s does not exist! Please check directory permissions!", 
+            conf_get_string (app->conf, "storage.dir"));
+        application_destroy (app);
+        return -1;
+    }
+
     // set foreground
     if (foreground)
         conf_set_boolean (app->conf, "app.foreground", foreground);

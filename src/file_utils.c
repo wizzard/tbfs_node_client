@@ -34,3 +34,23 @@ int utils_del_tree (const gchar *path)
 {
     return nftw (path, on_unlink_cb, 20, FTW_DEPTH | FTW_PHYS);
 }
+
+gboolean dir_exists_and_writable (const gchar *path)
+{
+    struct stat st;
+    
+    // check if path is a directory and try to access it
+    if (stat (path, &st) == -1) {
+        return FALSE;
+    }
+    // check if it's a directory
+    if (!S_ISDIR (st.st_mode)) {
+        return FALSE;
+    }
+
+    if (access (path, R_OK | W_OK | X_OK)) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
