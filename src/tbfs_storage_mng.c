@@ -77,11 +77,12 @@ void tbfs_storage_add_buf (StorageMng *mng, const gchar *info_hash, guint32 piec
         LOG_err (SMNG_LOG, "Failed to get storage torrent %s", info_hash);
         return;
     }
+
+    tbfs_storage_torrent_piece_write_block_buf (storage, piece_idx, offset, in_buf);
 }
 
-void tbfs_storage_get_buf (StorageMng *mng, const gchar *info_hash, guint32 piece_idx, guint32 offset)
+struct evbuffer *tbfs_storage_get_buf (StorageMng *mng, const gchar *info_hash, guint32 piece_idx, guint32 offset, guint32 length)
 {
-    struct evbuffer *out_buf;
     StorageTorrent *storage;
 
     storage = tbfs_storage_get_storage_torrent (mng, info_hash);
@@ -90,6 +91,5 @@ void tbfs_storage_get_buf (StorageMng *mng, const gchar *info_hash, guint32 piec
         return NULL;
     }
 
-    out_buf = evbuffer_new ();
-    return out_buf;
+    return tbfs_storage_torrent_piece_read_block_buf (storage, piece_idx, offset, length);
 }

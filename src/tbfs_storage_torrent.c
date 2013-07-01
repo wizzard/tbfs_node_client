@@ -131,13 +131,40 @@ const gchar *tbfs_storage_torrent_get_info_hash (StorageTorrent *storage)
 }
 /*}}}*/
 
-/*{{{ read_piece_buf*/
-void tbfs_storage_torrent_read_piece_buf (StorageTorrent *storage, guint32 piece_idx, guint32 offset, struct evbuffer *in_buf)
+/*{{{ piece_read_block_buf */
+struct evbuffer *tbfs_storage_torrent_piece_read_block_buf (StorageTorrent *storage, guint32 piece_idx, guint32 offset, guint32 length)
 {
+    struct evbuffer *out_buf;
+    struct evbuffer_file_segment *seg;
+    StoragePiece *piece;
+    
+    piece = tbfs_storage_piece_get (storage, piece_idx);
+    if (!piece)
+        return NULL;
+
+    seg = evbuffer_file_segment_new (piece->fd, offset, length, EVBUF_FS_DISABLE_SENDFILE);
+    if (!seg) {
+        LOG_err (ST_LOG, "Failed to read data of %u bytes from file %s !", length, piece->fname);
+		return NULL;
+    }
+
+    out_buf = evbuffer_new ();
+    if (evbuffer_add_file_segment (out_buf, seg, 0, length) < 0) {
+        LOG_err (ST_LOG, "Failed to read data of %u bytes from file %s !", length, piece->fname);
+        if (seg)
+            evbuffer_file_segment_free(seg);
+        evbuffer_free (out_buf);
+		return NULL;
+    }
+
+    evbuffer_file_segment_free (seg);
+
+    return out_buf;
 }
 /*}}}*/
 
-void tbfs_storage_torrent_write_piece_buf (StorageTorrent *storage, guint32 piece_idx, guint32 offset, struct evbuffer *in_buf)
+/*{{{ piece_write_block_buf */
+void tbfs_storage_torrent_piece_write_block_buf (StorageTorrent *storage, guint32 piece_idx, guint32 offset, struct evbuffer *in_buf)
 {
     StoragePiece *piece;
     ssize_t len;
@@ -158,3 +185,4 @@ void tbfs_storage_torrent_write_piece_buf (StorageTorrent *storage, guint32 piec
 
     wrange_add (piece->r_blocks, offset, offset + len);
 }
+/*}}}*/

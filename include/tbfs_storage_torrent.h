@@ -27,6 +27,7 @@ void tbfs_storage_torrent_destroy (StorageTorrent *storage);
 
 const gchar *tbfs_storage_torrent_get_info_hash (StorageTorrent *storage);
 
-void tbfs_storage_torrent_write_piece_buf (StorageTorrent *storage, guint32 piece_idx, guint32 offset, struct evbuffer *in_buf);
+void tbfs_storage_torrent_piece_write_block_buf (StorageTorrent *storage, guint32 piece_idx, guint32 offset, struct evbuffer *in_buf);
+struct evbuffer *tbfs_storage_torrent_piece_read_block_buf (StorageTorrent *storage, guint32 piece_idx, guint32 offset, guint32 length);
 
 #endif
