@@ -24,7 +24,12 @@ struct _Peer {
     PeerClient *client;
 
     struct sockaddr_in sin;
+
+    gboolean request_sent;
 };
+
+#define PEER_LOG "peer"
+
 /*}}}*/
 
 /*{{{ create / destroy */
@@ -40,6 +45,8 @@ Peer *tbfs_peer_create (PeerMng *mng, const gchar *peer_id, guint32 addr, guint1
     peer->sin.sin_family = AF_INET;
     peer->sin.sin_addr.s_addr = addr;
     peer->sin.sin_port = g_ntohs (port);
+
+    peer->request_sent = FALSE;
 
     return peer;
 }
@@ -61,11 +68,20 @@ const gchar *tbfs_peer_get_id (Peer *peer)
 // call from tbfs_peer_mng_peers_updated ()
 void tbfs_peer_on_pieces_request_cb (Peer *peer)
 {
-    if (peer->client) {
+    // peer is busy
+    if (peer->request_sent)
         return;
+
+    if (!peer->client) {
+        peer->client = tbfs_peer_client_create_with_addr (tbfs_peer_mng_get_app (peer->mng), &peer->sin);
+
+        if (peer->client) {
+            LOG_msg (PEER_LOG, "Peer is unavailable !");
+            return;
+        }
     }
 
-    peer->client = tbfs_peer_client_create_with_addr (tbfs_peer_mng_get_app (peer->mng), &peer->sin);
+    tbfs_peer_client_handshake_and_request (peer->client);
 }
 
 /*{{{ on_info_print_cb */

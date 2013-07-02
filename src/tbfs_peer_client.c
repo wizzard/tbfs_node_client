@@ -28,12 +28,13 @@ typedef enum {
 
 struct _PeerClient {
     Application *app;
+    Peer *peer;
 
     struct bufferevent *bev;
 
     PeerClientState state;
     
-    gchar info_hash[2 * SHA_DIGEST_LENGTH + 1];
+ //   gchar info_hash[2 * SHA_DIGEST_LENGTH + 1];
     gchar peer_id[PEER_ID_LENGTH + 1];
 };
 
@@ -61,6 +62,7 @@ PeerClient *tbfs_peer_client_create (Application *app, evutil_socket_t fd)
 
     client = g_new0 (PeerClient, 1);
     client->app = app;
+    client->peer = NULL;
     client->state = PCS_ReadingHandshake;
 
     client->bev = bufferevent_socket_new (application_get_evbase (app), 
@@ -102,6 +104,7 @@ PeerClient *tbfs_peer_client_create_with_addr (Application *app, struct sockaddr
         return NULL;
     }
 }
+
 
 void tbfs_peer_client_destroy (PeerClient *client)
 {
@@ -392,3 +395,10 @@ static void tbfs_peer_client_on_event_cb (struct bufferevent *bev, short what, v
 
 }
 /*}}}*/
+
+void tbfs_peer_client_handshake_and_request (PeerClient *client)
+{
+    struct evbuffer *pkg;
+
+    pkg = tbfs_peer_client_handshake_pkg_create (client);
+}

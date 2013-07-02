@@ -186,8 +186,6 @@ static void tbfs_mng_on_timer_cb (G_GNUC_UNUSED evutil_socket_t fd, G_GNUC_UNUSE
 /*}}}*/
 
 /*{{{ torrent registration */
-
-
 // adds and new torrent
 Torrent *tbfs_mng_torrent_register (TBFSMng *mng, const gchar *info_hash, guint32 total_pieces)
 {
