@@ -89,6 +89,7 @@ typedef struct _TBFSMng TBFSMng;
 typedef struct _TrackerClient TrackerClient;
 typedef struct _Torrent Torrent;
 typedef struct _PeerMng PeerMng;
+typedef struct _Peer Peer;
 
 typedef struct  {
     const gchar *header;

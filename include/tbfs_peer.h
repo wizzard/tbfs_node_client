@@ -20,7 +20,6 @@
 #include "global.h"
 #include "tbfs_peer_mng.h"
 
-typedef struct _Peer Peer;
 
 Peer *tbfs_peer_create (PeerMng *mng, const gchar *peer_id, guint32 addr, guint16 port);
 void tbfs_peer_destroy (Peer *peer);

@@ -34,8 +34,8 @@ struct _PeerClient {
 
     PeerClientState state;
     
- //   gchar info_hash[2 * SHA_DIGEST_LENGTH + 1];
-    gchar peer_id[PEER_ID_LENGTH + 1];
+    gchar hs_info_hash[2 * SHA_DIGEST_LENGTH + 1];
+    gchar hs_peer_id[PEER_ID_LENGTH + 1];
 };
 
 // Peer wire protocol
@@ -105,7 +105,6 @@ PeerClient *tbfs_peer_client_create_with_addr (Application *app, struct sockaddr
     }
 }
 
-
 void tbfs_peer_client_destroy (PeerClient *client)
 {
     if (client->bev)
@@ -117,7 +116,7 @@ void tbfs_peer_client_destroy (PeerClient *client)
 /*{{{ Peer wire protocol */
 static gboolean tbfs_peer_client_handshake_parse (PeerClient *client, struct evbuffer *inbuf)
 {
-    size_t pstrlen = 0;
+    ssize_t pstrlen = 0;
     gchar *pstr;
     guint8 reserved[8] = {0};
     uint8_t sha1[SHA_DIGEST_LENGTH];
@@ -145,7 +144,7 @@ static gboolean tbfs_peer_client_handshake_parse (PeerClient *client, struct evb
         LOG_err (PCLI_LOG, "Failed to read InfoHash handshake !");
         return FALSE;
     }
-    sha1_to_hexstr (client->info_hash, sha1);
+    sha1_to_hexstr (client->hs_info_hash, sha1);
 
     return TRUE;
 }
@@ -153,7 +152,7 @@ static gboolean tbfs_peer_client_handshake_parse (PeerClient *client, struct evb
 static gboolean tbfs_peer_client_handshake_peerid_parse (PeerClient *client, struct evbuffer *inbuf)
 {
     // peer_id
-    if (evbuffer_remove (inbuf, client->peer_id, PEER_ID_LENGTH) != PEER_ID_LENGTH) {
+    if (evbuffer_remove (inbuf, client->hs_peer_id, PEER_ID_LENGTH) != PEER_ID_LENGTH) {
         LOG_err (PCLI_LOG, "Failed to read PeerID in handshake !");
         return FALSE;
     }
@@ -209,15 +208,24 @@ static struct evbuffer *tbfs_peer_client_handshake_pkg_create (PeerClient *clien
     size_t pstrlen;
     guint8 reserved[8] = {0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
     uint8_t sha1[SHA_DIGEST_LENGTH];
+    Torrent *torrent;
 
     pstrlen = strlen (pstr);
-    hexstr_to_sha1 (sha1, client->info_hash);
+
+    torrent = tbfs_mng_torrent_get (application_get_mng (client->app), client->hs_info_hash);
+    if (!torrent) {
+        LOG_err (PCLI_LOG, "Cant find Torrent, info_hash: %s !", client->hs_info_hash);
+        return NULL;
+    }
+
+    hexstr_to_sha1 (sha1, client->hs_info_hash);
 
     outbuf = evbuffer_new ();
     evbuffer_add (outbuf, &pstrlen, 1);
     evbuffer_add (outbuf, pstr, pstrlen);
     evbuffer_add (outbuf, reserved, 8);
     evbuffer_add (outbuf, sha1, SHA_DIGEST_LENGTH);
+    // self peerid
     evbuffer_add (outbuf, 
         conf_get_string (application_get_conf (client->app), "peer.peer_id"),
         SHA_DIGEST_LENGTH
@@ -266,9 +274,9 @@ static struct evbuffer *tbfs_peer_client_bitfield_pkg_create (PeerClient *client
     Bitfield *bf;
     const guint8 *bits;
 
-    torrent = tbfs_mng_torrent_get (application_get_mng (client->app), client->info_hash);
+    torrent = tbfs_mng_torrent_get (application_get_mng (client->app), client->hs_info_hash);
     if (!torrent) {
-        LOG_err (PCLI_LOG, "Cant find Torrent, info_hash: %s !", client->info_hash);
+        LOG_err (PCLI_LOG, "Cant find Torrent, info_hash: %s !", client->hs_info_hash);
         return NULL;
     }
 
@@ -307,6 +315,7 @@ static void tbfs_peer_client_on_read_cb (struct bufferevent *bev, void *ctx)
 
     if (client->state == PCS_ReadingHandshake && inlen) {
         struct evbuffer *outbuf = NULL;
+        Torrent *torrent;
 
         if (!tbfs_peer_client_handshake_parse (client, inbuf)) {
             LOG_err (PCLI_LOG, "Failed to parse handshake !");
@@ -314,6 +323,15 @@ static void tbfs_peer_client_on_read_cb (struct bufferevent *bev, void *ctx)
             return;
         }
         LOG_debug (PCLI_LOG, "Handshake is parsed !");
+
+        // check if Torrent exists
+        torrent = tbfs_mng_torrent_get (application_get_mng (client->app), client->hs_info_hash);
+        if (!torrent) {
+            LOG_msg (PCLI_LOG, "Torrent %s does not exist !", client->hs_info_hash);
+            tbfs_peer_client_destroy (client);
+            return;
+        }
+        
         client->state = PCS_ReadingPeerID;
 
         outbuf = tbfs_peer_client_handshake_pkg_create (client);
@@ -332,6 +350,27 @@ static void tbfs_peer_client_on_read_cb (struct bufferevent *bev, void *ctx)
             return;
         }
         LOG_debug (PCLI_LOG, "Peer is parsed !");
+
+        // check if peer_id == Peer's id
+        // Peer already linked
+        if (client->peer) {
+            if (strncmp (tbfs_peer_get_id (client->peer), client->hs_peer_id, PEER_ID_LENGTH)) {
+                LOG_err (PCLI_LOG, "Peer with ID %s does not exist !", client->hs_peer_id);
+                tbfs_peer_client_destroy (client);
+                return;
+            }
+        // Search for peer and link
+        } else {
+            /*
+            client->peer = tbfs_peer_mng_get_peer (applicaclient->hs_peer_id);
+            if (!client->peer) {
+                LOG_err (PCLI_LOG, "Peer with ID %s does not exist !", client->hs_peer_id);
+                tbfs_peer_client_destroy (client);
+                return;
+            }
+            */
+        }
+
         client->state = PCS_Ready;
 
         outbuf = tbfs_peer_client_bitfield_pkg_create (client);
@@ -396,7 +435,7 @@ static void tbfs_peer_client_on_event_cb (struct bufferevent *bev, short what, v
 }
 /*}}}*/
 
-void tbfs_peer_client_handshake_and_request (PeerClient *client)
+void tbfs_peer_client_connect_get_piece (PeerClient *client)
 {
     struct evbuffer *pkg;
 

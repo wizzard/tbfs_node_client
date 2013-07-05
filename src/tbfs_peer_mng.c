@@ -15,7 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #include "tbfs_peer_mng.h"
-#include "tbfs_peer.h"
 #include "tbfs_bitfield.h"
 
 /*{{{ struct */
@@ -23,7 +22,8 @@ struct _PeerMng {
     Application *app;
     Torrent *torrent;
 
-    GHashTable *h_peer_addrs;
+    GHashTable *h_peer_addrs; // IP addr hash 
+    GHashTable *h_peer_id; // PeerID
     gint peer_count;
 
     GQueue *q_pieces_wanted;
@@ -58,6 +58,7 @@ PeerMng *tbfs_peer_mng_create (Application *app, Torrent *torrent)
     mng->app = app;
     mng->torrent = torrent;
     mng->h_peer_addrs = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)tbfs_peer_mng_addr_destroy);
+    mng->h_peer_id = g_hash_table_new (g_str_hash, g_str_equal);
     mng->peer_count = 0;
     mng->q_pieces_wanted = g_queue_new ();
 
@@ -78,6 +79,7 @@ void tbfs_peer_mng_destroy (PeerMng *mng)
 {
     event_free (mng->ev_timer);
     g_queue_free (mng->q_pieces_wanted);
+    g_hash_table_destroy (mng->h_peer_id);
     g_hash_table_destroy (mng->h_peer_addrs);
     g_free (mng);
 }
@@ -114,6 +116,8 @@ void tbfs_peer_mng_peer_add (PeerMng *mng, const gchar *peer_id, guint32 addr, g
         Peer *peer;
         peer = tbfs_peer_create (mng, peer_id, addr, port);
         g_hash_table_insert (p_addr->h_peers, GUINT_TO_POINTER (port), peer);
+        // XXX: check if exists
+        g_hash_table_insert (mng->h_peer_id, (gpointer) tbfs_peer_get_id (peer), peer);
         mng->peer_count++;
     }
 }
@@ -140,6 +144,12 @@ void tbfs_peer_mng_peers_updated (PeerMng *mng)
 gint tbfs_peer_mng_peer_count (PeerMng *mng)
 {
     return mng->peer_count;
+}
+
+
+Peer *tbfs_peer_mng_get_peer (PeerMng *mng, const gchar *peer_id)
+{
+    return g_hash_table_lookup (mng->h_peer_id, peer_id);
 }
 /*}}}*/
 

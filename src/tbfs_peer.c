@@ -20,8 +20,9 @@
 /*{{{ struct */
 struct _Peer {
     PeerMng *mng;
-    gchar *peer_id;
+    gchar peer_id[PEER_ID_LENGTH + 1];
     PeerClient *client;
+    PeerType type;
 
     struct sockaddr_in sin;
 
@@ -39,7 +40,7 @@ Peer *tbfs_peer_create (PeerMng *mng, const gchar *peer_id, guint32 addr, guint1
 
     peer = g_new0 (Peer, 1);
     peer->mng = mng;
-    peer->peer_id = g_strdup (peer_id);
+    strncpy (peer->peer_id, peer_id, PEER_ID_LENGTH);
 
     memset (&peer->sin, 0, sizeof (peer->sin));
     peer->sin.sin_family = AF_INET;
@@ -53,7 +54,6 @@ Peer *tbfs_peer_create (PeerMng *mng, const gchar *peer_id, guint32 addr, guint1
 
 void tbfs_peer_destroy (Peer *peer)
 {
-    g_free (peer->peer_id);
     g_free (peer);
 }
 /*}}}*/
@@ -81,7 +81,7 @@ void tbfs_peer_on_pieces_request_cb (Peer *peer)
         }
     }
 
-    tbfs_peer_client_handshake_and_request (peer->client);
+    tbfs_peer_client_connect_get_piece (peer->client);
 }
 
 /*{{{ on_info_print_cb */

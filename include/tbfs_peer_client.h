@@ -23,7 +23,10 @@
 typedef struct _PeerClient PeerClient;
 
 PeerClient *tbfs_peer_client_create (Application *app, evutil_socket_t fd);
+PeerClient *tbfs_peer_client_create_with_addr (Application *app, struct sockaddr_in *sin);
 void tbfs_peer_client_destroy (PeerClient *client);
+
+void tbfs_peer_client_connect_get_piece (PeerClient *client);
 
 #endif
 

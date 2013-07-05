@@ -19,6 +19,7 @@
 
 #include "global.h"
 #include "tbfs_torrent.h"
+#include "tbfs_peer.h"
 
 
 PeerMng *tbfs_peer_mng_create (Application *app, Torrent *torrent);
@@ -31,6 +32,7 @@ void tbfs_peer_mng_peers_updated (PeerMng *mng);
 gint tbfs_peer_mng_peer_count (PeerMng *mng);
 
 void tbfs_peer_mng_torrent_piece_added (PeerMng *mng, guint32 piece_id);
+Peer *tbfs_peer_mng_get_peer (PeerMng *mng, const gchar *peer_id);
 
 void tbfs_peer_mng_info_print (PeerMng *mng, struct evbuffer *buf, PrintFormat *print_format);
 
