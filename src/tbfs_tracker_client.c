@@ -141,11 +141,12 @@ void tbfs_tracker_client_send_request (TrackerClient *client, const gchar *info_
     hexstr_to_sha1 (sha1, info_hash);
     escape_sha1 (escaped_info_hash, sha1);
 
-    uri = g_strdup_printf ("/announce?info_hash=%s&peer_id=%s&port=%d&uploaded=0&downloaded=0&left=0&numwant=80&event=%s&compact=1",
+    uri = g_strdup_printf ("/announce?info_hash=%s&peer_id=%s&port=%d&uploaded=0&downloaded=0&left=0&numwant=80&event=%s&compact=%d",
         escaped_info_hash,
         conf_get_string (application_get_conf (client->app), "peer.peer_id"),
         conf_get_int (application_get_conf (client->app), "peer_server.port"),
-        s_event
+        s_event,
+        conf_get_boolean (application_get_conf (client->app), "tracker.compact") ? 1 : 0
     );
 
     LOG_debug (TCLI_LOG, "Sending request to tracker: %s", uri);

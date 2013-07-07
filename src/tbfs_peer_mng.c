@@ -102,6 +102,8 @@ void tbfs_peer_mng_peer_add (PeerMng *mng, const gchar *peer_id, guint32 addr, g
     PeerAddr *p_addr;
     Peer *existing_peer;
 
+    LOG_debug (PMNG_LOG, "[t: %s] Adding peer: %s", tbfs_torrent_get_info_hash (mng->torrent), peer_id);
+
     p_addr = g_hash_table_lookup (mng->h_peer_addrs, GUINT_TO_POINTER (addr));
     if (!p_addr) {
         p_addr = g_new0 (PeerAddr, 1);
@@ -127,14 +129,16 @@ void tbfs_peer_mng_peers_updated (PeerMng *mng)
 {
     Bitfield *bf_want;
 
+    LOG_debug (PMNG_LOG, "[t: %s] Peers are updated, sending requests ..", tbfs_torrent_get_info_hash (mng->torrent));
+
     bf_want = tbfs_torrent_get_bitfield_pieces_want (mng->torrent);
     if (!tbfs_bitfield_get_set_bits (bf_want)) {
-        LOG_debug (PMNG_LOG, "[%s] No pieces wanted !", tbfs_torrent_get_info_hash (mng->torrent));
+        LOG_debug (PMNG_LOG, "[t: %s] No pieces wanted !", tbfs_torrent_get_info_hash (mng->torrent));
         return;
     }
 
     if (!mng->peer_count) {
-        LOG_debug (PMNG_LOG, "[%s] No peers !", tbfs_torrent_get_info_hash (mng->torrent));
+        LOG_debug (PMNG_LOG, "[t: %s] No peers !", tbfs_torrent_get_info_hash (mng->torrent));
         return;
     }
 
@@ -146,10 +150,14 @@ gint tbfs_peer_mng_peer_count (PeerMng *mng)
     return mng->peer_count;
 }
 
-
 Peer *tbfs_peer_mng_get_peer (PeerMng *mng, const gchar *peer_id)
 {
     return g_hash_table_lookup (mng->h_peer_id, peer_id);
+}
+
+const gchar *tbfs_peer_mng_get_info_hash (PeerMng *mng)
+{
+    return tbfs_torrent_get_info_hash (mng->torrent);
 }
 /*}}}*/
 
@@ -197,15 +205,13 @@ static void tbfs_peer_mng_on_timer_cb (G_GNUC_UNUSED evutil_socket_t fd, G_GNUC_
     struct timeval tv;
     time_t now = time (NULL);
 
-    LOG_debug (PMNG_LOG, "[%s] On timer", tbfs_torrent_get_info_hash (mng->torrent));
-
     // peers
     if (!mng->peers_being_checked && 
         now - mng->peers_last_checked >= conf_get_int (application_get_conf (mng->app), "peer_client.check_sec")) 
     {
         //mng->peers_last_checked = now;
         mng->peers_being_checked = TRUE;
-        LOG_debug (PMNG_LOG, "[%s] Checking peers..", tbfs_torrent_get_info_hash (mng->torrent));
+        LOG_debug (PMNG_LOG, "[t: %s] Checking peers..", tbfs_torrent_get_info_hash (mng->torrent));
     }
 
     // re-start timer

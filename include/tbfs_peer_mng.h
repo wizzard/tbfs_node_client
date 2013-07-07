@@ -26,6 +26,7 @@ PeerMng *tbfs_peer_mng_create (Application *app, Torrent *torrent);
 void tbfs_peer_mng_destroy (PeerMng *mng);
 
 Application *tbfs_peer_mng_get_app (PeerMng *mng);
+const gchar *tbfs_peer_mng_get_info_hash (PeerMng *mng);
 
 void tbfs_peer_mng_peer_add (PeerMng *mng, const gchar *peer_id, guint32 addr, guint16 port);
 void tbfs_peer_mng_peers_updated (PeerMng *mng);

@@ -113,17 +113,17 @@ static void tbfs_mng_on_torrent_checked_cb (gboolean status, TBFSMng *mng, gchar
     GList *l;
 
     if (!status) {
-        LOG_err (MNG_LOG, "Failed to check torrent !");
+        LOG_err (MNG_LOG, "[t: %s] Failed to check torrent !", info_hash);
         return;
     }
 
     tdata = g_hash_table_lookup (mng->h_torrent_data, info_hash);
     if (!tdata || !tdata->torrent) {
-        LOG_err (MNG_LOG, "Torrent does not exist !");
+        LOG_err (MNG_LOG, "[t: %s] Torrent does not exist !", info_hash);
         return;
     }
 
-    LOG_debug (MNG_LOG, "Torrent %s is checked !", info_hash);
+    LOG_debug (MNG_LOG, "[t: %s] Torrent is checked !", info_hash);
 
     for (l = g_list_first (l_peer_addrs); l; l = g_list_next (l)) {
         PeerAddr *addr = (PeerAddr *) l->data;
@@ -151,6 +151,8 @@ static void tbfs_mng_foreach_torrent (G_GNUC_UNUSED gpointer key, gpointer value
         now - tdata->last_checked >= conf_get_int (application_get_conf (mng->app), "tracker.torrent_check_sec")) {
 
         tdata->being_checked = TRUE;
+    
+        LOG_debug (MNG_LOG, "[t: %s] Checking torrent..", tbfs_torrent_get_info_hash (tdata->torrent));
 
         // XXX:
         tbfs_tracker_client_send_request (application_get_tracker_client (mng->app), 
@@ -196,13 +198,13 @@ Torrent *tbfs_mng_torrent_register (TBFSMng *mng, const gchar *info_hash, guint3
     tdata = g_hash_table_lookup (mng->h_torrent_data, info_hash);
     if (tdata) {
         //XXX:
-        LOG_msg (MNG_LOG, "Torrent already exist !");
+        LOG_msg (MNG_LOG, "[t: %s] Torrent already exist !", info_hash);
         return NULL;
     }
 
     torrent = tbfs_torrent_create (mng->app, info_hash, total_pieces);
     if (!torrent) {
-        LOG_err (MNG_LOG, "Failed to create torrent !");
+        LOG_err (MNG_LOG, "[t: %s] Failed to create torrent !", info_hash);
         return NULL;
     }
 
@@ -210,7 +212,7 @@ Torrent *tbfs_mng_torrent_register (TBFSMng *mng, const gchar *info_hash, guint3
 
     g_hash_table_insert (mng->h_torrent_data, (gchar *)tbfs_torrent_get_info_hash (torrent), tdata);
 
-    LOG_debug (MNG_LOG, "Registering torrent %s ..", info_hash);
+    LOG_debug (MNG_LOG, "[t: %s] Registering torrent", info_hash);
 
     return torrent;
 }

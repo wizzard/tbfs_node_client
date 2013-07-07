@@ -19,6 +19,34 @@
 #include <syslog.h>
 
 static gboolean use_syslog = FALSE;
+static gboolean use_color = FALSE;
+
+typedef struct {
+    gint id;
+    const gchar *prefix;
+} ColorData;
+
+typedef enum {
+    CD_RED = 0,
+    CD_GREEN = 1,
+    CD_YELLOW = 2,
+    CD_BLUE = 3,
+    CD_MAGENTA = 4,
+    CD_CYAN = 5,
+    CD_DEFAULT
+} ColorDef;
+
+// <ESC>[{attr};{fg};{bg}m
+static const gchar *colors[] = {
+    "\033[31m",
+    "\033[32m",
+    "\033[33m",
+    "\033[34m",
+    "\033[35m",
+    "\033[36m",
+};
+
+static const gchar c_reset[] = "\033[0m";
 
 // prints a message string to stdout
 // XXX: extend it (syslog, etc)
@@ -47,11 +75,19 @@ void logger_log_msg (G_GNUC_UNUSED const gchar *file, G_GNUC_UNUSED gint line, G
         g_vsnprintf (out_str, sizeof (out_str), format, args);
     va_end (args);
 
+
     if (log_level == LOG_debug) {
         if (level == LOG_err)
             g_fprintf (stdout, "%s \033[1;31m[%s]\033[0m  (%s %s:%d) %s\n", ts, subsystem, func, file, line, out_str);
-        else
-            g_fprintf (stdout, "%s [%s] (%s %s:%d) %s\n", ts, subsystem, func, file, line, out_str);
+        else {
+            if (use_color) {
+                guint i;
+                i = g_str_hash (subsystem) % CD_DEFAULT;
+                g_fprintf (stdout, "%s [%s%s%s] (%s %s:%d) %s%s%s\n", ts, colors[i], subsystem, c_reset, func, file, line, colors[i], out_str, c_reset);
+            } else {
+                g_fprintf (stdout, "%s [%s] (%s %s:%d) %s\n", ts, subsystem, func, file, line, out_str);
+            }
+        }
     }
     else {
         if (use_syslog)
@@ -74,4 +110,9 @@ void logger_destroy (void)
 void logger_set_syslog (gboolean use)
 {
     use_syslog = use;
+}
+
+void logger_set_color (gboolean use)
+{
+    use_color = use;
 }

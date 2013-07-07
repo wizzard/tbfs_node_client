@@ -20,11 +20,16 @@
 #include "global.h"
 #include "tbfs_peer_mng.h"
 
+typedef enum {
+    PT_Leecher = 0,
+    PT_Seeder = 1,
+} PeerType;
 
 Peer *tbfs_peer_create (PeerMng *mng, const gchar *peer_id, guint32 addr, guint16 port);
 void tbfs_peer_destroy (Peer *peer);
 
 const gchar *tbfs_peer_get_id (Peer *peer);
+const gchar *tbfs_peer_get_info_hash (Peer *peer);
 
 void tbfs_peer_on_pieces_request_cb (Peer *peer);
 void tbfs_peer_on_info_print_cb (Peer *peer, struct evbuffer *buf, PrintFormat *print_format);

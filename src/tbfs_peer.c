@@ -42,10 +42,10 @@ Peer *tbfs_peer_create (PeerMng *mng, const gchar *peer_id, guint32 addr, guint1
     peer->mng = mng;
     strncpy (peer->peer_id, peer_id, PEER_ID_LENGTH);
 
-    memset (&peer->sin, 0, sizeof (peer->sin));
+    memset (&peer->sin, 0, sizeof (struct sockaddr_in));
     peer->sin.sin_family = AF_INET;
     peer->sin.sin_addr.s_addr = addr;
-    peer->sin.sin_port = g_ntohs (port);
+    peer->sin.sin_port = port;
 
     peer->request_sent = FALSE;
 
@@ -63,6 +63,12 @@ const gchar *tbfs_peer_get_id (Peer *peer)
 {
     return peer->peer_id;
 }
+
+const gchar *tbfs_peer_get_info_hash (Peer *peer)
+{
+    return tbfs_peer_mng_get_info_hash (peer->mng);
+}
+
 /*}}}*/
 
 // call from tbfs_peer_mng_peers_updated ()
@@ -75,13 +81,16 @@ void tbfs_peer_on_pieces_request_cb (Peer *peer)
     if (!peer->client) {
         peer->client = tbfs_peer_client_create_with_addr (tbfs_peer_mng_get_app (peer->mng), &peer->sin);
 
-        if (peer->client) {
+        if (!peer->client) {
             LOG_msg (PEER_LOG, "Peer is unavailable !");
             return;
         }
+
+        tbfs_peer_client_set_peer (peer->client, peer);
     }
 
-    tbfs_peer_client_connect_get_piece (peer->client);
+    //LOG_debug (PEER_LOG, "[p: %p] Requesting piece data!", peer);
+    //tbfs_peer_client_connect_get_piece (peer->client);
 }
 
 /*{{{ on_info_print_cb */

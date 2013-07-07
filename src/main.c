@@ -242,14 +242,17 @@ int main (G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[])
         conf_set_string (app->conf, "cmd_server.listen", "0.0.0.0");
         conf_set_int (app->conf, "cmd_server.port", 8000);
         conf_set_int (app->conf, "log.level", LOG_msg);
+        conf_set_boolean (app->conf, "log.color", TRUE);
         conf_set_string (app->conf, "tracker.host", "10.0.0.197");
         conf_set_int (app->conf, "tracker.port", 6969);
         conf_set_int (app->conf, "tracker.timeout", 30);
         conf_set_int (app->conf, "tracker.retries", 2);
         conf_set_int (app->conf, "tracker.check_sec", 1);
+        conf_set_boolean (app->conf, "tracker.compact", TRUE);
         conf_set_int (app->conf, "tracker.torrent_check_sec", 10);
         //conf_set_string (app->conf, "tracker.announce_url", "http://127.0.0.1:6969/announce");
-        conf_set_string (app->conf, "tracker.announce_url", "http://10.0.0.197:6969/announce");
+        //conf_set_string (app->conf, "tracker.announce_url", "http://10.0.0.197:6969/announce");
+        conf_set_string (app->conf, "tracker.announce_url", "http://10.0.0.149:6969/announce");
         conf_set_boolean (app->conf, "app.foreground", FALSE);
         conf_set_string (app->conf, "peer.default_id", "xxxxxxxxxxxxxxxxxxxx");
         conf_set_int (app->conf, "peer_client.check_sec", 10);
@@ -260,6 +263,7 @@ int main (G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[])
         conf_set_int (app->conf, "log.level", LOG_debug);
 
     log_level = conf_get_int (app->conf, "log.level");
+    logger_set_color (conf_get_boolean (app->conf, "log.color"));
 
     // check if --version is specified
     if (version) {
