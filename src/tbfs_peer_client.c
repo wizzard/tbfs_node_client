@@ -25,7 +25,13 @@ typedef enum {
     PCS_ReadingHandshake = 1,
     PCS_ReadingPeerID = 2,
     PCS_Ready = 3,
+    PCS_Piece = 4,
 } PeerClientState;
+
+typedef enum {
+    PCRS_NewPacket = 0,
+    PCRS_Continue = 1,
+} PeerClientReadingState;
 
 struct _PeerClient {
     Application *app;
@@ -34,6 +40,7 @@ struct _PeerClient {
     struct bufferevent *bev;
 
     PeerClientState state;
+    PeerClientReadingState read_state;
     
     gchar hs_info_hash[2 * SHA_DIGEST_LENGTH + 1];
     gchar hs_peer_id[PEER_ID_LENGTH + 1];
@@ -65,6 +72,7 @@ PeerClient *tbfs_peer_client_create (Application *app, evutil_socket_t fd)
     client->app = app;
     client->peer = NULL;
     client->state = PCS_Connecting;
+    client->read_state = PCRS_NewPacket;
 
     client->bev = bufferevent_socket_new (application_get_evbase (app), 
         fd, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS | BEV_OPT_UNLOCK_CALLBACKS);
@@ -132,6 +140,8 @@ void tbfs_peer_client_set_peer (PeerClient *client, Peer *peer)
 }
 
 /*{{{ Peer wire protocol */
+
+/*{{{ parsers */
 static gboolean tbfs_peer_client_handshake_parse (PeerClient *client, struct evbuffer *inbuf)
 {
     ssize_t pstrlen = 0;
@@ -196,7 +206,9 @@ static gboolean tbfs_peer_client_request_parse (PeerClient *client, struct evbuf
 
     return TRUE;
 }
+/*}}}*/
 
+/*{{{ encoders */
 static PeerMsgType tbfs_peer_client_msg_typelen_get (struct evbuffer *inbuf, guint32 *msg_len)
 {
     guint8 type;
@@ -355,10 +367,12 @@ static struct evbuffer *tbfs_peer_client_bitfield_pkg_create (PeerClient *client
     evbuffer_add (outbuf, bits, len - 1); // - type
     return outbuf;
 }
-
+/*}}}*/
 /*}}}*/
 
 /*{{{ on_read_cb / on_write_cb / on_event_cb */
+
+/*{{{ on_read_cb */
 static void tbfs_peer_client_on_read_cb (struct bufferevent *bev, void *ctx)
 {
     PeerClient *client = (PeerClient *) ctx;
@@ -369,6 +383,12 @@ static void tbfs_peer_client_on_read_cb (struct bufferevent *bev, void *ctx)
     inlen = evbuffer_get_length (inbuf);
 
     LOG_debug (PCLI_LOG, "[pc: %p] Incoming data: %zd", client, evbuffer_get_length (inbuf));
+
+    // part of data received
+    if (client->read_state == PCRS_Continue) {
+
+    // a new packet received
+    } else {
 
     if (client->state == PCS_ReadingHandshake && inlen) {
         struct evbuffer *outbuf = NULL;
@@ -468,6 +488,9 @@ static void tbfs_peer_client_on_read_cb (struct bufferevent *bev, void *ctx)
                 bufferevent_write_buffer (bev, outbuf);
                 LOG_debug (PCLI_LOG, "[pc: %p] Request package is sent !", client);
                 evbuffer_free (outbuf);
+                
+                client->state = PCS_Piece;
+
 
             // seeder
             } else {
@@ -485,14 +508,28 @@ static void tbfs_peer_client_on_read_cb (struct bufferevent *bev, void *ctx)
                 return;
             }
         }
+
+
+        inlen = evbuffer_get_length (inbuf);
+    }
+
+    if (client->state == PCS_Piece && inlen) {
+        gchar *data;
+
+        data = evbuffer_pullup (inbuf, -1);
+
+        LOG_debug (PCLI_LOG, "[pc: %p] Incoming Piece data, len: %u", client, inlen);
     }
     
     if (evbuffer_get_length (inbuf) > 0)
         LOG_debug (PCLI_LOG, "[pc: %p] Still left: %zd", client, evbuffer_get_length (inbuf));
+    
+    } // packet read
 
     // XXX
     evbuffer_drain (inbuf, -1);
 }
+/*}}}*/
 
 static void tbfs_peer_client_on_write_cb (struct bufferevent *bev, void *ctx)
 {
@@ -500,6 +537,7 @@ static void tbfs_peer_client_on_write_cb (struct bufferevent *bev, void *ctx)
     LOG_debug (PCLI_LOG, "[pc: %p] Package is written !", client);
 }
 
+/*{{{ on_event_cb */
 static void tbfs_peer_client_on_event_cb (struct bufferevent *bev, short what, void *ctx)
 {
     PeerClient *client = (PeerClient *) ctx;
@@ -519,4 +557,6 @@ static void tbfs_peer_client_on_event_cb (struct bufferevent *bev, short what, v
     }
 
 }
+/*}}}*/
+
 /*}}}*/
